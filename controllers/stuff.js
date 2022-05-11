@@ -1,3 +1,5 @@
+//logique métier dans les controllers
+
 const Thing = require('../models/thing')
 
 exports.createThing = (req, res, next) => {
