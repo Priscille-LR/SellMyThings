@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt')
+const jwt = require('jsonwebtoken')
 
 const User = require('../models/user')
 
@@ -14,7 +15,7 @@ const User = require('../models/user')
 //Plus la valeur est élevée, plus l'exécution de la fonction sera longue, et plus le hachage sera sécurisé
 //renvoie une Promise dans laquelle on reçoit le hash généré
 exports.signup = (req, res, next) => {
-    bcrypt.hash(req.body.response, 10)
+    bcrypt.hash(req.body.password, 10)
         .then(hash => {
             const user = new User({
                 email: req.body.email,
@@ -41,6 +42,9 @@ exports.signup = (req, res, next) => {
 //par ex, vérifier si un mdp entré par le user correspond à un hash sécurisé enregistré en DB – 
 //cela montre que même bcrypt ne peut pas décrypter ses propres hashs.
 
+//jwt = tokens encodés qui peuvent être utilisés pour l'autorisation.
+//méthode sign() utilise une clé secrète pour encoder un token qui peut contenir un payload personnalisé et avoir une validité limitée.
+
 exports.login = (req, res, next) => {
     User.findOne({ email: req.body.email })
         .then(user => {
@@ -54,7 +58,12 @@ exports.login = (req, res, next) => {
                     }
                     res.status(200).json({
                         userId: user._id,
-                        token: 'TOKEN'
+                        token: jwt.sign( //encoder un nouveau token 
+                            //ce token contient l'ID de l'utilisateur en tant que payload (les données encodées dans le token) ;
+                            { userId: user._id }, //appliquer le bon user a chaque objet et ne pas pouvoir modifier les objets des autres users
+                            'RANDOM_TOKEN_SECRET', //chaîne secrète de développement temporaire RANDOM_SECRET_KEY pour encoder le token
+                            { expiresIn: '24h' } //durée de validité => le user devra se reconnecter au bout de 24h
+                        )
                     })
                 })
                 .catch(error => res.status(500).json({ error }))

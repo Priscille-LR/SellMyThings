@@ -20,10 +20,22 @@ exports.updateThing = (req, res, next) => {
         .catch(error => res.status(400).json({ error }))
 }
 
+//récup thing dans la base et vérifie qu'il appartient bien à la personne qui veut faire la suppression
+//=> seul le propriétaire d'un thing peut le supprimer
 exports.deleteThing = (req, res, next) => {
-    Thing.deleteOne({ _id: req.params.id })
-        .then(() => res.status(200).json({ message: 'objet supprimé' }))
-        .catch(error => res.status(400).json({ error }))
+    Thing.findOne({ _id: req.params.id })
+        .then(thing => {
+            if (!thing) {
+                return res.status(404).json({ error: new Error('objet non trouvé') }) //
+            }
+            if (thing.userId !== req.auth.userId) {
+                return res.status(401).json({ error: new Error('requete non autorisée') }) //
+            }
+            Thing.deleteOne({ _id: req.params.id })
+                .then(() => res.status(200).json({ message: 'objet supprimé' }))
+                .catch(error => res.status(400).json({ error }))
+        })
+
 }
 
 exports.getOneThing = (req, res, next) => {
