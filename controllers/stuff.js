@@ -2,10 +2,20 @@
 
 const Thing = require('../models/thing')
 
+//mise a jour de la requete post 
+//Pour ajouter un fichier à la requête, le front-end doit envoyer les données de la requête sous la forme form-data, 
+//et non sous forme de JSON. Le corps de la requête contient une chaîne thing , qui est simplement un objet Thing converti en chaîne. 
+//=> analyser à l'aide de JSON.parse() pour obtenir un objet utilisable.
+
+//résoudre l'URL complète de l'image, car req.file.filename ne contient que le segment filename 
+//req.protocol pour obtenir le premier segment (ici 'http' ) + req.get('host') pour résoudre l'hôte du serveur (ici, 'localhost:3000' ). 
+//on ajoute '/images/' et le nom de fichier pour compléter notre URL.
 exports.createThing = (req, res, next) => {
-    delete req.body._id
+    const thingObject = JSON.parse(req.body.thing) //extraire objet json du thing
+    delete thingObject._id
     const thing = new Thing({
-        ...req.body
+        ...thingObject,
+        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
     })
     thing.save()
         .then(() => res.status(201).json({ message: 'objet enregistré' }))
@@ -13,9 +23,15 @@ exports.createThing = (req, res, next) => {
 }
 
 exports.updateThing = (req, res, next) => {
-    //1er arg = on modifie l'obje dont l'id = id dans les params
+    //crée un objet thingObject qui regarde si req.file existe ou non
+    const thingObject = req.file ? { //si on trouve un fichier => parse objet et modifie image url (traite new image)
+        ...JSON.parse(req.body.thing),
+        imageUrl: `${req.protocol}://${req.get('host')}/images/${req.file.filename}`
+    } : { ...req.body } //sinon, on traite l'objet entrant
+    //1er arg = on modifie l'objet dont l'id = id dans les params
     //2e arg = nouvelle version de l'objet: récup thing dans le corps de la requete; id corresp à celui des params (celui dans le body est peut-etre pas bon)
-    Thing.updateOne({ _id: req.params.id }, { ...req.body, _id: req.params.id })
+
+    Thing.updateOne({ _id: req.params.id }, { ...thingObject, _id: req.params.id }) //modifie id pour corresp a celui des params de requete
         .then(() => res.status(200).json({ message: 'Objet modifié !' }))
         .catch(error => res.status(400).json({ error }))
 }
